@@ -14,6 +14,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	analytics "gopkg.in/segmentio/analytics-go.v3"
 )
 
 type preFunc func(ctx context.Context, method string) (context.Context, error)
@@ -56,6 +57,7 @@ func (t *Textile) preUsageFunc(ctx context.Context, method string) (context.Cont
 	if t.bc == nil {
 		return ctx, nil
 	}
+
 	for _, ignored := range authIgnoredMethods {
 		if method == ignored {
 			return ctx, nil
@@ -107,6 +109,22 @@ func (t *Textile) preUsageFunc(ctx context.Context, method string) (context.Cont
 				return ctx, err
 			}
 			cus, err = t.bc.GetCustomer(ctx, account.Owner().Key)
+
+			// Create new analytics entry
+			if t.sc != nil {
+				if account.Owner().Type == mdb.Dev {
+					t.sc.Enqueue(analytics.Identify{
+						UserId: account.Owner().Key.String(),
+						Traits: analytics.NewTraits().
+							SetName(account.Owner().Name).
+							SetEmail(account.Owner().Email).
+							Set("username", account.Owner().Username).
+							Set("type", account.Owner().Type).
+							Set("hub_signup", "true"),
+					})
+				}
+			}
+
 			if err != nil {
 				return ctx, err
 			}

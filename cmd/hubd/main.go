@@ -96,6 +96,10 @@ var (
 				Key:      "dns.token",
 				DefValue: "",
 			},
+			"segmentKey": {
+				Key:      "segment.key",
+				DefValue: "",
+			},
 			"emailFrom": {
 				Key:      "email.from",
 				DefValue: "Hub <verify@email.textile.io>",
@@ -212,6 +216,12 @@ func init() {
 		config.Flags["dnsDomain"].DefValue.(string),
 		"Cloudflare API Token for dnsDomain")
 
+	// Analytics settings
+	rootCmd.PersistentFlags().String(
+		"segmentKey",
+		config.Flags["segmentKey"].DefValue.(string),
+		"Segment analytics API key")
+
 	// Verification email settings
 	rootCmd.PersistentFlags().String(
 		"emailFrom",
@@ -288,6 +298,8 @@ var rootCmd = &cobra.Command{
 		dnsZoneID := config.Viper.GetString("dns.zone_id")
 		dnsToken := config.Viper.GetString("dns.token")
 
+		segmentKey := config.Viper.GetString("segment.key")
+
 		emailFrom := config.Viper.GetString("email.from")
 		emailDomain := config.Viper.GetString("email.domain")
 		emailApiKey := config.Viper.GetString("email.api_key")
@@ -326,6 +338,8 @@ var rootCmd = &cobra.Command{
 			DNSDomain: dnsDomain,
 			DNSZoneID: dnsZoneID,
 			DNSToken:  dnsToken,
+
+			SegmentKey: segmentKey,
 
 			EmailFrom:          emailFrom,
 			EmailDomain:        emailDomain,
