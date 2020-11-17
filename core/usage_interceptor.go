@@ -14,7 +14,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	analytics "gopkg.in/segmentio/analytics-go.v3"
 )
 
 type preFunc func(ctx context.Context, method string) (context.Context, error)
@@ -95,9 +94,11 @@ func (t *Textile) preUsageFunc(ctx context.Context, method string) (context.Cont
 	cus, err := t.bc.GetCustomer(ctx, account.Owner().Key)
 	if err != nil {
 		if strings.Contains(err.Error(), mongo.ErrNoDocuments.Error()) {
+
 			opts := []billing.Option{
 				billing.WithEmail(account.Owner().Email),
 			}
+
 			if account.Owner().Type == mdb.User {
 				key, ok := mdb.APIKeyFromContext(ctx)
 				if !ok {
@@ -105,26 +106,22 @@ func (t *Textile) preUsageFunc(ctx context.Context, method string) (context.Cont
 				}
 				opts = append(opts, billing.WithParentKey(key.Owner))
 			}
+
+			var accountType string
+			switch account.Owner().Type {
+			case mdb.User:
+				accountType = "User"
+			case mdb.Org:
+				accountType = "Org"
+			default:
+				accountType = "Dev"
+			}
+			opts = append(opts, billing.WithAccountType(accountType))
+
 			if _, err := t.bc.CreateCustomer(ctx, account.Owner().Key, opts...); err != nil {
 				return ctx, err
 			}
 			cus, err = t.bc.GetCustomer(ctx, account.Owner().Key)
-
-			// Create new analytics entry
-			if t.sc != nil {
-				if account.Owner().Type == mdb.Dev {
-					t.sc.Enqueue(analytics.Identify{
-						UserId: account.Owner().Key.String(),
-						Traits: analytics.NewTraits().
-							SetName(account.Owner().Name).
-							SetEmail(account.Owner().Email).
-							Set("username", account.Owner().Username).
-							Set("type", account.Owner().Type).
-							Set("hub_signup", "true"),
-					})
-				}
-			}
-
 			if err != nil {
 				return ctx, err
 			}

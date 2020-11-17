@@ -50,7 +50,6 @@ import (
 	tdb "github.com/textileio/textile/v2/threaddb"
 	"github.com/textileio/textile/v2/util"
 	"google.golang.org/grpc"
-	analytics "gopkg.in/segmentio/analytics-go.v3"
 )
 
 var (
@@ -141,7 +140,6 @@ type Textile struct {
 	thn *netclient.Client
 	bc  *billing.Client
 	pc  *pow.Client
-	sc  analytics.Client
 
 	bucks *tdb.Buckets
 	mail  *tdb.Mail
@@ -300,17 +298,7 @@ func NewTextile(ctx context.Context, conf Config) (*Textile, error) {
 
 	// Configure a billing client
 	if conf.AddrBillingAPI != "" {
-		t.bc, err = billing.NewClient(conf.AddrBillingAPI, grpc.WithInsecure())
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	// Configure analytics client
-	if conf.SegmentKey != "" {
-		t.sc, err = analytics.NewWithConfig(conf.SegmentKey, analytics.Config{
-			BatchSize: 1,
-		})
+		t.bc, err = billing.NewClient(conf.AddrBillingAPI, conf.SegmentKey, grpc.WithInsecure())
 		if err != nil {
 			return nil, err
 		}

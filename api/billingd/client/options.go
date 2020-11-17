@@ -3,8 +3,9 @@ package client
 import "github.com/textileio/go-threads/core/thread"
 
 type options struct {
-	email     string
-	parentKey thread.PubKey
+	email       string
+	accountType string
+	parentKey   thread.PubKey
 }
 
 type Option func(*options)
@@ -13,6 +14,13 @@ type Option func(*options)
 func WithEmail(email string) Option {
 	return func(args *options) {
 		args.email = email
+	}
+}
+
+// WithAccountType attaches an account type to the new customer.
+func WithAccountType(accountType string) Option {
+	return func(args *options) {
+		args.accountType = accountType
 	}
 }
 

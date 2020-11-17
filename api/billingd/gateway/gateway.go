@@ -39,6 +39,7 @@ type Config struct {
 	Addr                ma.Multiaddr
 	APIAddr             ma.Multiaddr
 	StripeWebhookSecret string
+	SegmentKey          string
 	Debug               bool
 }
 
@@ -57,6 +58,7 @@ func NewGateway(conf Config) (*Gateway, error) {
 	}
 	client, err := billing.NewClient(
 		apiTarget,
+		conf.SegmentKey,
 		grpc.WithInsecure(),
 		grpc.WithPerRPCCredentials(common.Credentials{}),
 	)

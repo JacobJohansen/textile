@@ -7,22 +7,35 @@ import (
 	"github.com/textileio/go-threads/core/thread"
 	pb "github.com/textileio/textile/v2/api/billingd/pb"
 	"google.golang.org/grpc"
+	analytics "gopkg.in/segmentio/analytics-go.v3"
 )
 
 // Client provides the client api.
 type Client struct {
 	c    pb.APIServiceClient
+	sc   analytics.Client
 	conn *grpc.ClientConn
 }
 
 // NewClient starts the client.
-func NewClient(target string, opts ...grpc.DialOption) (*Client, error) {
+func NewClient(target string, segmentKey string, opts ...grpc.DialOption) (*Client, error) {
 	conn, err := grpc.Dial(target, opts...)
 	if err != nil {
 		return nil, err
 	}
+
+	// Configure analytics client
+	var sc analytics.Client
+	if segmentKey != "" {
+		sc = analytics.New(segmentKey)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &Client{
 		c:    pb.NewAPIServiceClient(conn),
+		sc:   sc,
 		conn: conn,
 	}, nil
 }
@@ -54,6 +67,19 @@ func (c *Client) CreateCustomer(ctx context.Context, key thread.PubKey, opts ...
 	if err != nil {
 		return "", err
 	}
+
+	// Create new analytics entry
+	if c.sc != nil {
+		c.sc.Enqueue(analytics.Identify{
+			UserId: key.String(),
+			Traits: analytics.NewTraits().
+				SetEmail(args.email).
+				Set("parent_key", parentKey).
+				Set("account_type", args.accountType).
+				Set("hub_signup", "true"),
+		})
+	}
+
 	return res.CustomerId, nil
 }
 
